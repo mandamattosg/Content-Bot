@@ -77,12 +77,20 @@ class AnalysisService:
 
     def _build_source_trace(self, topic: dict[str, Any], signals: list[SignalRecord]) -> list[dict[str, Any]]:
         topic_text = str(topic.get("topic", "")).lower()
+        keywords = self._extract_keywords(topic_text)
         matches: list[dict[str, Any]] = []
 
         for signal in signals:
             title = (signal.title or "").lower()
             content = (signal.content or "").lower()
-            if topic_text not in title and topic_text not in content:
+            metadata_text = self._metadata_text(signal)
+            combined_text = " ".join([title, content, metadata_text]).lower()
+
+            if topic_text in combined_text:
+                score = 3
+            elif any(keyword in combined_text for keyword in keywords):
+                score = 2
+            else:
                 continue
 
             source_name = self._source_label(signal)
@@ -93,10 +101,25 @@ class AnalysisService:
                     "title": signal.title,
                     "url": signal.url,
                     "feed_title": signal.metadata_.get("feed_title") if isinstance(signal.metadata_, dict) else None,
+                    "match_score": score,
                 }
             )
 
+        matches.sort(key=lambda match: match.get("match_score", 0), reverse=True)
         return matches[:3]
+
+    def _extract_keywords(self, topic_text: str) -> list[str]:
+        words = [word for word in topic_text.replace("/", " ").replace("-", " ").split() if len(word) > 2]
+        return [word for word in words if word.isalnum()]
+
+    def _metadata_text(self, signal: SignalRecord) -> str:
+        if not isinstance(signal.metadata_, dict):
+            return ""
+        metadata_values = []
+        for value in signal.metadata_.values():
+            if isinstance(value, (str, int, float)):
+                metadata_values.append(str(value))
+        return " ".join(metadata_values)
 
     def _source_label(self, signal: SignalRecord) -> str:
         if signal.source == "news":

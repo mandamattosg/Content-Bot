@@ -1,3 +1,5 @@
+import logging
+
 from app.models.signal import Signal
 from app.services.pipeline_service import PipelineService
 
@@ -66,3 +68,27 @@ def test_pipeline_service_runs_collect_analysis_and_telegram() -> None:
     assert ingestion.calls[0][0].title == "Titulo"
     assert analysis.calls
     assert telegram.calls[0][1] == 1
+
+
+def test_pipeline_service_logs_stage_lifecycle(caplog) -> None:
+    signal = Signal(
+        source="news",
+        title="Titulo",
+        content="Conteudo",
+        url="https://example.com/1",
+        published_at="2026-07-21T00:00:00",
+        metadata={},
+    )
+    pipeline = PipelineService(
+        db=None,
+        collectors=[DummyCollector([signal])],
+        ingestion_service=DummyIngestionService(),
+        analysis_service=DummyAnalysisService(),
+        telegram_service=DummyTelegramService(),
+    )
+
+    with caplog.at_level(logging.INFO, logger="content_radar.pipeline"):
+        pipeline.run()
+
+    assert "Starting pipeline stage: collect" in caplog.text
+    assert "Completed pipeline stage: collect" in caplog.text

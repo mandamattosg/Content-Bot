@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from app.models.signal import Signal
 from app.services.analysis_service import AnalysisService
 from app.services.signal_ingestion import SignalIngestionService
 from app.services.telegram_delivery import TelegramDeliveryService
+
+logger = logging.getLogger("content_radar.pipeline")
 
 
 class PipelineService:
@@ -28,21 +31,31 @@ class PipelineService:
 
     def run(self) -> dict[str, Any]:
         collected_signals: list[Signal] = []
+        logger.info("Starting pipeline stage: collect")
         for collector in self._collectors:
             collected_signals.extend(collector.collect())
+        logger.info("Completed pipeline stage: collect", extra={"signals_count": len(collected_signals)})
 
-        ingestion_result = self._ingestion_service.ingest(collected_signals) if self._ingestion_service else None
+        ingestion_result = None
+        if self._ingestion_service is not None:
+            logger.info("Starting pipeline stage: ingest")
+            ingestion_result = self._ingestion_service.ingest(collected_signals)
+            logger.info("Completed pipeline stage: ingest")
 
         analysis_result = None
         if self._analysis_service is not None:
+            logger.info("Starting pipeline stage: analyze")
             analysis_result = self._analysis_service.analyze_recent_signals()
+            logger.info("Completed pipeline stage: analyze")
 
         telegram_result = None
         if self._telegram_service is not None and analysis_result is not None:
+            logger.info("Starting pipeline stage: telegram")
             telegram_result = self._telegram_service.send_analysis_summary(
                 analysis_result,
                 signals_count=analysis_result.get("signals_count", 0),
             )
+            logger.info("Completed pipeline stage: telegram")
 
         return {
             "ingestion": {

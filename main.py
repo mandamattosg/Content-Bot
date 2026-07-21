@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,6 +17,8 @@ from app.services.analysis_service import AnalysisService
 from app.services.pipeline_service import PipelineService
 from app.services.signal_ingestion import SignalIngestionService
 from app.services.telegram_delivery import TelegramDeliveryService
+
+logger = logging.getLogger("content_radar.api")
 
 
 @asynccontextmanager
@@ -51,6 +54,7 @@ def health() -> dict[str, str]:
 
 @app.post("/pipeline/collect-and-ingest")
 def collect_and_ingest() -> dict[str, int]:
+    logger.info("Starting endpoint: /pipeline/collect-and-ingest")
     collectors = [NewsCollector(), RedditCollector(), TrendsCollector()]
     collected_signals = []
 
@@ -63,6 +67,7 @@ def collect_and_ingest() -> dict[str, int]:
     finally:
         db.close()
 
+    logger.info("Completed endpoint: /pipeline/collect-and-ingest")
     return {
         "collected": result.collected,
         "normalized": result.normalized,
@@ -73,6 +78,7 @@ def collect_and_ingest() -> dict[str, int]:
 
 @app.post("/pipeline/analyze")
 def analyze_recent_signals() -> dict[str, object]:
+    logger.info("Starting endpoint: /pipeline/analyze")
     db: Session = SessionLocal()
     try:
         provider = GeminiProvider(api_key=settings.gemini_api_key)
@@ -82,11 +88,13 @@ def analyze_recent_signals() -> dict[str, object]:
     finally:
         db.close()
 
+    logger.info("Completed endpoint: /pipeline/analyze")
     return result
 
 
 @app.post("/pipeline/gemini-test")
 def gemini_test() -> dict[str, object]:
+    logger.info("Starting endpoint: /pipeline/gemini-test")
     provider = GeminiProvider(api_key=settings.gemini_api_key)
     try:
         payload = provider.analyze(
@@ -104,11 +112,13 @@ def gemini_test() -> dict[str, object]:
     except GeminiQuotaError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
 
+    logger.info("Completed endpoint: /pipeline/gemini-test")
     return {"status": "ok", "response": payload}
 
 
 @app.post("/pipeline/send-telegram")
 def send_telegram_message() -> dict[str, object]:
+    logger.info("Starting endpoint: /pipeline/send-telegram")
     db: Session = SessionLocal()
     try:
         provider = GeminiProvider(api_key=settings.gemini_api_key)
@@ -121,11 +131,13 @@ def send_telegram_message() -> dict[str, object]:
     finally:
         db.close()
 
+    logger.info("Completed endpoint: /pipeline/send-telegram")
     return {"status": "sent", "telegram": result}
 
 
 @app.post("/pipeline/run")
 def run_pipeline() -> dict[str, object]:
+    logger.info("Starting endpoint: /pipeline/run")
     db: Session = SessionLocal()
     try:
         provider = GeminiProvider(api_key=settings.gemini_api_key)
@@ -147,4 +159,5 @@ def run_pipeline() -> dict[str, object]:
     finally:
         db.close()
 
+    logger.info("Completed endpoint: /pipeline/run")
     return {"status": "ok", "pipeline": result}
