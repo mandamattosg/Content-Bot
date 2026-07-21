@@ -10,7 +10,7 @@ from app.models.signal import Signal
 
 from app.collectors import NewsCollector, RedditCollector, TrendsCollector
 from app.config.settings import settings
-from app.database.session import SessionLocal
+from app.database.session import SessionLocal, init_db
 from app.providers.gemini import GeminiProvider, GeminiQuotaError
 from app.scheduler.scheduler import scheduler_service
 from app.services.analysis_service import AnalysisService
@@ -23,6 +23,7 @@ logger = logging.getLogger("content_radar.api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
     if settings.enable_scheduler:
         scheduler_service.start()
     try:
