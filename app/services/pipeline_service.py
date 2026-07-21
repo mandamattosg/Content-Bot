@@ -51,11 +51,16 @@ class PipelineService:
         telegram_result = None
         if self._telegram_service is not None and analysis_result is not None:
             logger.info("Starting pipeline stage: telegram")
-            telegram_result = self._telegram_service.send_analysis_summary(
-                analysis_result,
-                signals_count=analysis_result.get("signals_count", 0),
-            )
-            logger.info("Completed pipeline stage: telegram")
+            try:
+                telegram_result = self._telegram_service.send_analysis_summary(
+                    analysis_result,
+                    signals_count=analysis_result.get("signals_count", 0),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Telegram delivery failed: %s", exc)
+                telegram_result = {"ok": False, "error": "telegram_delivery_failed", "message": str(exc)}
+            else:
+                logger.info("Completed pipeline stage: telegram")
 
         return {
             "ingestion": {

@@ -19,13 +19,27 @@ class TelegramSender:
 
         url = f"https://api.telegram.org/bot{self._token}/sendMessage"
         payload = {
-            "chat_id": self._chat_id,
+            "chat_id": str(self._chat_id).strip(),
             "text": text,
             "disable_web_page_preview": True,
+            "disable_notification": False,
         }
-        response = requests.post(url, json=payload, timeout=15)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = requests.post(url, json=payload, timeout=15)
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as exc:
+            try:
+                detail = response.json() if response is not None else {}
+            except ValueError:
+                detail = {"raw": response.text if response is not None else ""}
+            return {
+                "ok": False,
+                "error": "telegram_send_failed",
+                "status_code": response.status_code if response is not None else None,
+                "message": str(exc),
+                "details": detail,
+            }
 
     def build_summary_message(self, analysis: dict[str, Any], *, signals_count: int) -> str:
         topics = analysis.get("topics", [])
