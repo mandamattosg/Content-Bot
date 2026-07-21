@@ -20,6 +20,12 @@ from app.services.telegram_delivery import TelegramDeliveryService
 
 logger = logging.getLogger("content_radar.api")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    force=True,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
