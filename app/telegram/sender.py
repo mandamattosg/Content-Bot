@@ -41,9 +41,16 @@ class TelegramSender:
                 "details": detail,
             }
 
+    def send_messages(self, texts: list[str]) -> list[dict[str, Any]]:
+        return [self.send_message(text) for text in texts]
+
     def build_summary_message(self, analysis: dict[str, Any], *, signals_count: int) -> str:
+        messages = self.build_summary_messages(analysis, signals_count=signals_count)
+        return messages[0] if messages else ""
+
+    def build_summary_messages(self, analysis: dict[str, Any], *, signals_count: int) -> list[str]:
         topics = analysis.get("topics", [])
-        lines = [
+        header_lines = [
             "📚 Content Radar",
             "",
             f"Foram analisados {signals_count} sinais recentes.",
@@ -51,31 +58,40 @@ class TelegramSender:
         ]
 
         if not topics:
-            lines.append("Nenhum tópico relevante foi identificado no momento.")
-            return "\n".join(lines)
+            return ["\n".join(header_lines + ["Nenhum tópico relevante foi identificado no momento."])]
 
-        for topic in topics:
-            score = topic.get("score", 0)
-            stars = "★" * int(round(score / 2))
-            lines.append(html.escape(str(topic.get("topic", "Tema"))))
-            lines.append(f"Nota: {score}/10 {stars}")
-            lines.append(f"Motivo: {html.escape(str(topic.get('reason', '')))}")
-            source_trace = topic.get("source_trace", [])
-            if source_trace:
-                lines.append("Origem:")
-                for entry in source_trace:
-                    label = html.escape(str(entry.get("source_name") or entry.get("source") or "Fonte"))
-                    title = html.escape(str(entry.get("title") or ""))
-                    url = entry.get("url") or ""
-                    if url:
-                        lines.append(f"• {label}: {title} ({url})")
-                    else:
-                        lines.append(f"• {label}: {title}")
-            ideas = topic.get("video_ideas", [])
-            if ideas:
-                lines.append("Ideias:")
-                for idea in ideas:
-                    lines.append(f"• {html.escape(str(idea))}")
-            lines.append("")
+        first_block_topics = topics[:3]
+        second_block_topics = topics[3:6]
 
-        return "\n".join(lines).strip()
+        blocks = []
+        for block_topics in (first_block_topics, second_block_topics):
+            if not block_topics:
+                continue
+            lines = list(header_lines)
+            for topic in block_topics:
+                score = topic.get("score", 0)
+                stars = "★" * int(round(score / 2))
+                lines.append(html.escape(str(topic.get("topic", "Tema"))))
+                lines.append(f"Nota: {score}/10 {stars}")
+                reason = html.escape(str(topic.get("reason", "")))
+                lines.append(f"Motivo: {reason[:220]}")
+                source_trace = topic.get("source_trace", [])[:1]
+                if source_trace:
+                    lines.append("Origem:")
+                    for entry in source_trace:
+                        label = html.escape(str(entry.get("source_name") or entry.get("source") or "Fonte"))
+                        title = html.escape(str(entry.get("title") or ""))
+                        url = entry.get("url") or ""
+                        if url:
+                            lines.append(f"• {label}: {title} ({url})")
+                        else:
+                            lines.append(f"• {label}: {title}")
+                ideas = topic.get("video_ideas", [])[:1]
+                if ideas:
+                    lines.append("Ideias:")
+                    for idea in ideas:
+                        lines.append(f"• {html.escape(str(idea))}")
+                lines.append("")
+            blocks.append("\n".join(lines).strip())
+
+        return blocks

@@ -58,8 +58,8 @@ class RedditCollector(Collector):
         if cached_posts:
             return cached_posts
 
-        attempts = max(settings.collector_retry_attempts, 5)
-        base_delay = max(settings.collector_retry_delay_seconds, 2.5)
+        attempts = max(settings.collector_retry_attempts, 2)
+        base_delay = max(settings.collector_retry_delay_seconds, 1.0)
 
         for attempt in range(1, attempts + 1):
             try:
@@ -69,12 +69,8 @@ class RedditCollector(Collector):
             except RedditRateLimitError as error:
                 retry_after = error.retry_after_seconds or 0.0
                 sleep_seconds = max(retry_after, base_delay * attempt)
-                logger.info("Reddit rate limited for r/%s; retrying in %.1fs", subreddit, sleep_seconds)
-                if attempt < attempts:
-                    import time
-
-                    time.sleep(sleep_seconds)
-                continue
+                logger.info("Reddit rate limited for r/%s; skipping after %.1fs", subreddit, sleep_seconds)
+                break
             except (requests.RequestException, RuntimeError, ValueError, JSONDecodeError):
                 if attempt < attempts:
                     import time

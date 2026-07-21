@@ -14,5 +14,13 @@ class TelegramDeliveryService:
         if not settings.telegram_token or not settings.telegram_chat_id:
             raise ValueError("Telegram credentials are not configured")
 
-        message = self._sender.build_summary_message(analysis, signals_count=signals_count)
-        return self._sender.send_message(message)
+        messages = self._sender.build_summary_messages(analysis, signals_count=signals_count)
+        if len(messages) == 1:
+            return self._sender.send_message(messages[0])
+
+        results = self._sender.send_messages(messages)
+        return {
+            "ok": all(result.get("ok") for result in results),
+            "sent_messages": len(results),
+            "results": results,
+        }
