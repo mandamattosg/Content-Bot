@@ -60,22 +60,25 @@ class TelegramSender:
         if not topics:
             return ["\n".join(header_lines + ["Nenhum tópico relevante foi identificado no momento."])]
 
-        first_block_topics = topics[:3]
-        second_block_topics = topics[3:6]
+        split_index = max(1, len(topics) // 2)
+        topic_blocks = [topics[:split_index], topics[split_index:]]
 
         blocks = []
-        for block_topics in (first_block_topics, second_block_topics):
+        for block_topics in topic_blocks:
             if not block_topics:
                 continue
             lines = list(header_lines)
             for topic in block_topics:
                 score = topic.get("score", 0)
                 stars = "★" * int(round(score / 2))
-                lines.append(html.escape(str(topic.get("topic", "Tema"))))
+                lines.append(f"• {html.escape(str(topic.get('topic', 'Tema')))}")
                 lines.append(f"Nota: {score}/10 {stars}")
-                reason = html.escape(str(topic.get("reason", "")))
-                lines.append(f"Motivo: {reason[:220]}")
-                source_trace = topic.get("source_trace", [])[:1]
+
+                reason = str(topic.get("reason", "")).strip()
+                if reason:
+                    lines.append(f"Motivo: {html.escape(reason)}")
+
+                source_trace = topic.get("source_trace", [])[:2]
                 if source_trace:
                     lines.append("Origem:")
                     for entry in source_trace:
@@ -83,14 +86,16 @@ class TelegramSender:
                         title = html.escape(str(entry.get("title") or ""))
                         url = entry.get("url") or ""
                         if url:
-                            lines.append(f"• {label}: {title} ({url})")
+                            lines.append(f"  • {label}: {title} ({url})")
                         else:
-                            lines.append(f"• {label}: {title}")
-                ideas = topic.get("video_ideas", [])[:1]
+                            lines.append(f"  • {label}: {title}")
+
+                ideas = topic.get("video_ideas", [])[:3]
                 if ideas:
                     lines.append("Ideias:")
                     for idea in ideas:
-                        lines.append(f"• {html.escape(str(idea))}")
+                        lines.append(f"  • {html.escape(str(idea))}")
+
                 lines.append("")
             blocks.append("\n".join(lines).strip())
 

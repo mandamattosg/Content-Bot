@@ -83,7 +83,7 @@ class AnalysisService:
         )
 
     def _build_source_trace(self, topic: dict[str, Any], signals: list[SignalRecord]) -> list[dict[str, Any]]:
-        topic_text = str(topic.get("topic", "")).lower()
+        topic_text = str(topic.get("topic", "")).lower().strip()
         keywords = self._extract_keywords(topic_text)
         matches: list[dict[str, Any]] = []
 
@@ -93,12 +93,20 @@ class AnalysisService:
             metadata_text = self._metadata_text(signal)
             combined_text = " ".join([title, content, metadata_text]).lower()
 
-            if topic_text in combined_text:
-                score = 3
-            elif any(keyword in combined_text for keyword in keywords):
-                score = 2
-            else:
+            if not combined_text:
                 continue
+
+            exact_matches = topic_text and topic_text in combined_text
+            keyword_matches = [keyword for keyword in keywords if keyword and keyword in combined_text]
+            if not exact_matches and not keyword_matches:
+                continue
+
+            score = 5 if exact_matches else 3
+            score += len(keyword_matches)
+            if signal.source == "news" and signal.metadata_.get("feed_title") if isinstance(signal.metadata_, dict) else False:
+                score += 1
+            if signal.source == "reddit" and isinstance(signal.metadata_, dict) and signal.metadata_.get("subreddit"):
+                score += 1
 
             source_name = self._source_label(signal)
             matches.append(

@@ -81,8 +81,8 @@ class RedditCollector(Collector):
         return cached_posts or []
 
     def _fetch_subreddit_posts(self, subreddit: str) -> list[dict[str, Any]]:
-        url = f"https://www.reddit.com/r/{subreddit}/.rss"
-        response = self._session.get(url, timeout=settings.collector_timeout_seconds)
+        rss_url = f"https://www.reddit.com/r/{subreddit}/.rss"
+        response = self._session.get(rss_url, timeout=settings.collector_timeout_seconds)
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After")
             retry_after_seconds = float(retry_after) if retry_after and retry_after.isdigit() else None
@@ -91,7 +91,8 @@ class RedditCollector(Collector):
 
         feed = feedparser.parse(response.text)
         if getattr(feed, "bozo", False) and getattr(feed, "bozo_exception", None) is not None:
-            raise RuntimeError(f"Failed to parse Reddit RSS for subreddit {subreddit}: {feed.bozo_exception}")
+            logger.warning("Reddit RSS parsing failed for r/%s: %s", subreddit, feed.bozo_exception)
+            return self._fetch_subreddit_posts_via_json(subreddit)
 
         entries = []
         for entry in getattr(feed, "entries", []):
@@ -106,6 +107,50 @@ class RedditCollector(Collector):
                     "upvote_ratio": None,
                     "author": getattr(entry, "author", None),
                     "created_utc": self._entry_time_to_utc(getattr(entry, "published", None)),
+                }
+            )
+
+        if entries:
+            return entries
+
+        logger.info("Reddit RSS returned no entries for r/%s; trying JSON fallback", subreddit)
+        return self._fetch_subreddit_posts_via_json(subreddit)
+
+    def _fetch_subreddit_posts_via_json(self, subreddit: str) -> list[dict[str, Any]]:
+        json_url = f"https://www.reddit.com/r/{subreddit}/.json"
+        response = self._session.get(json_url, timeout=settings.collector_timeout_seconds)
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After")
+            retry_after_seconds = float(retry_after) if retry_after and retry_after.isdigit() else None
+            raise RedditRateLimitError(subreddit, retry_after_seconds=retry_after_seconds)
+        response.raise_for_status()
+
+        try:
+            payload = response.json()
+        except (ValueError, JSONDecodeError) as error:
+            raise RuntimeError(f"Failed to decode Reddit JSON response for subreddit {subreddit}: {error}") from error
+
+        children = []
+        for item in payload if isinstance(payload, list) else []:
+            child = item.get("data", {}).get("children", []) if isinstance(item, dict) else []
+            children.extend(child)
+
+        entries: list[dict[str, Any]] = []
+        for child in children:
+            data = child.get("data", {}) if isinstance(child, dict) else {}
+            if not isinstance(data, dict):
+                continue
+            entries.append(
+                {
+                    "title": str(data.get("title", "")),
+                    "url": str(data.get("url", "")),
+                    "selftext": str(data.get("selftext", "")),
+                    "permalink": str(data.get("permalink", "")),
+                    "score": data.get("score"),
+                    "num_comments": data.get("num_comments"),
+                    "upvote_ratio": data.get("upvote_ratio"),
+                    "author": data.get("author"),
+                    "created_utc": data.get("created_utc"),
                 }
             )
 

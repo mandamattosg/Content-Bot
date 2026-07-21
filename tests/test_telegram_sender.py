@@ -25,6 +25,7 @@ def test_build_summary_message_escapes_html_special_chars() -> None:
     message = sender.build_summary_message(analysis, signals_count=1)
 
     assert "Tema &lt;tag&gt;" in message
-    assert "Motivo &amp; &lt;script&gt;" in message
+    assert "Motivo: Motivo &amp; &lt;script&gt;" in message
+    assert "Ideias:" in message
     assert "Ideia &lt;x&gt;" in message
     assert "Portal &lt;A&gt;" in message
