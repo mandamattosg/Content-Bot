@@ -11,4 +11,5 @@ pytrends==4.9.2
 pydantic-settings==2.10.1
 python-dotenv==1.1.1
 psycopg[binary]==3.2.9
+psycopg2-binary
 PyYAML==6.0.2

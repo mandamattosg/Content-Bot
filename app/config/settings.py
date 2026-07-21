@@ -8,7 +8,15 @@ class Settings(BaseSettings):
     timezone: str = "America/Sao_Paulo"
 
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/content_radar"
-    data_retention_days: int = 15
+    data_retention_days: int = 30
+
+    @property
+    def sqlalchemy_database_url(self):
+        return self.database_url.replace(
+            "postgresql://",
+            "postgresql+psycopg://",
+            1,
+        )
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_model_name: str = Field(default="gemini-2.0-flash", alias="GEMINI_MODEL_NAME")
