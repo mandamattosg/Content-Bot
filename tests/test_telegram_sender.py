@@ -1,6 +1,30 @@
 from app.telegram.sender import TelegramSender
 
 
+def test_send_message_uses_html_parse_mode(monkeypatch) -> None:
+    sender = TelegramSender(token="token", chat_id="chat")
+    captured = {}
+
+    class DummyResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, bool]:
+            return {"ok": True}
+
+    def fake_post(url: str, json: dict[str, object] | None = None, timeout: int | None = None) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse()
+
+    monkeypatch.setattr("app.telegram.sender.requests.post", fake_post)
+
+    sender.send_message("Olá")
+
+    assert captured["json"]["parse_mode"] == "HTML"
+
+
 def test_build_summary_message_escapes_html_special_chars() -> None:
     sender = TelegramSender(token="token", chat_id="chat")
     analysis = {

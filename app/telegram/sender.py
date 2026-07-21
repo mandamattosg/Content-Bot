@@ -21,6 +21,7 @@ class TelegramSender:
         payload = {
             "chat_id": str(self._chat_id).strip(),
             "text": text,
+            "parse_mode": "HTML",
             "disable_web_page_preview": True,
             "disable_notification": False,
         }
@@ -82,13 +83,13 @@ class TelegramSender:
                 if source_trace:
                     lines.append("Origem:")
                     for entry in source_trace:
-                        label = html.escape(str(entry.get("source_name") or entry.get("source") or "Fonte"))
-                        title = html.escape(str(entry.get("title") or ""))
+                        label = str(entry.get("source_name") or entry.get("source") or "Fonte")
+                        title = str(entry.get("title") or "")
                         url = entry.get("url") or ""
                         if url:
-                            lines.append(f"  • {label}: {title} ({url})")
+                            lines.append(f"  • {html.escape(label)}: {html.escape(title)} ({url})")
                         else:
-                            lines.append(f"  • {label}: {title}")
+                            lines.append(f"  • {html.escape(label)}: {html.escape(title)}")
 
                 ideas = topic.get("video_ideas", [])[:3]
                 if ideas:
