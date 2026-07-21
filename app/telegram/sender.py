@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from typing import Any
 
 import requests
@@ -20,7 +21,6 @@ class TelegramSender:
         payload = {
             "chat_id": self._chat_id,
             "text": text,
-            "parse_mode": "HTML",
             "disable_web_page_preview": True,
         }
         response = requests.post(url, json=payload, timeout=15)
@@ -30,9 +30,9 @@ class TelegramSender:
     def build_summary_message(self, analysis: dict[str, Any], *, signals_count: int) -> str:
         topics = analysis.get("topics", [])
         lines = [
-            "📚 <b>Content Radar</b>",
+            "📚 Content Radar",
             "",
-            f"Foram analisados <b>{signals_count}</b> sinais recentes.",
+            f"Foram analisados {signals_count} sinais recentes.",
             "",
         ]
 
@@ -43,15 +43,15 @@ class TelegramSender:
         for topic in topics:
             score = topic.get("score", 0)
             stars = "★" * int(round(score / 2))
-            lines.append(f"<b>{topic.get('topic', 'Tema')}</b>")
+            lines.append(html.escape(str(topic.get("topic", "Tema"))))
             lines.append(f"Nota: {score}/10 {stars}")
-            lines.append(f"Motivo: {topic.get('reason', '')}")
+            lines.append(f"Motivo: {html.escape(str(topic.get('reason', '')))}")
             source_trace = topic.get("source_trace", [])
             if source_trace:
                 lines.append("Origem:")
                 for entry in source_trace:
-                    label = entry.get("source_name") or entry.get("source") or "Fonte"
-                    title = entry.get("title") or ""
+                    label = html.escape(str(entry.get("source_name") or entry.get("source") or "Fonte"))
+                    title = html.escape(str(entry.get("title") or ""))
                     url = entry.get("url") or ""
                     if url:
                         lines.append(f"• {label}: {title} ({url})")
@@ -61,7 +61,7 @@ class TelegramSender:
             if ideas:
                 lines.append("Ideias:")
                 for idea in ideas:
-                    lines.append(f"• {idea}")
+                    lines.append(f"• {html.escape(str(idea))}")
             lines.append("")
 
         return "\n".join(lines).strip()
