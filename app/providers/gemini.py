@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
@@ -11,6 +12,8 @@ from app.config.settings import settings
 from app.models.signal import Signal
 from app.prompts.daily_analysis import load_daily_analysis_prompt
 from app.providers.base import AIProvider
+
+logger = logging.getLogger("content_radar.gemini")
 
 
 class GeminiQuotaError(RuntimeError):
@@ -36,10 +39,13 @@ class GeminiProvider(AIProvider):
         last_error: Exception | None = None
         for model_name in self._fallback_models:
             try:
+                logger.info("Attempting Gemini model: %s", model_name)
                 model = genai.GenerativeModel(model_name)
                 response = model.generate_content(request_text)
+                logger.info("Gemini response received from model %s: %s", model_name, response.text)
                 return self._parse_response(response.text)
             except Exception as exc:  # pragma: no cover - exercised in runtime
+                logger.exception("Gemini model %s failed: %s", model_name, exc)
                 last_error = exc
                 if self._is_quota_error(exc):
                     raise GeminiQuotaError(str(exc)) from exc

@@ -35,18 +35,21 @@ class PipelineService:
         for collector in self._collectors:
             collected_signals.extend(collector.collect())
         logger.info("Completed pipeline stage: collect", extra={"signals_count": len(collected_signals)})
+        logger.info("Collect stage result: %s signals collected", len(collected_signals))
 
         ingestion_result = None
         if self._ingestion_service is not None:
             logger.info("Starting pipeline stage: ingest")
             ingestion_result = self._ingestion_service.ingest(collected_signals)
             logger.info("Completed pipeline stage: ingest")
+            logger.info("Ingest stage result: inserted=%s skipped_duplicates=%s", ingestion_result.inserted, ingestion_result.skipped_duplicates)
 
         analysis_result = None
         if self._analysis_service is not None:
             logger.info("Starting pipeline stage: analyze")
             analysis_result = self._analysis_service.analyze_recent_signals()
             logger.info("Completed pipeline stage: analyze")
+            logger.info("Analyze stage result: topics=%s signals_count=%s", len(analysis_result.get("topics", [])), analysis_result.get("signals_count", 0))
 
         telegram_result = None
         if self._telegram_service is not None and analysis_result is not None:
@@ -62,6 +65,7 @@ class PipelineService:
             else:
                 logger.info("Completed pipeline stage: telegram")
 
+        logger.info("Pipeline completed successfully with telegram_result=%s", telegram_result)
         return {
             "ingestion": {
                 "collected": ingestion_result.collected if ingestion_result else 0,

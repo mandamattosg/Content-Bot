@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -10,6 +11,8 @@ from app.models.signal_record import SignalRecord
 from app.models.topic_summary import TopicSummary
 from app.providers.base import AIProvider
 from app.repositories.signal_repository import SignalRepository
+
+logger = logging.getLogger("content_radar.analysis")
 
 
 class AnalysisService:
@@ -23,11 +26,15 @@ class AnalysisService:
             since = datetime.now() - timedelta(hours=24)
 
         signals = self._repository.get_signals_since(since)
+        logger.info("Analysis service received %s signals since %s", len(signals), since)
         if not signals:
+            logger.info("No signals available for analysis")
             return {"topics": [], "analysis_run_id": None, "signals_count": 0}
 
         analyzed_signals = [self._to_signal(signal) for signal in signals]
+        logger.info("Sending %s signals to AI provider", len(analyzed_signals))
         analysis = self._ai_provider.analyze(analyzed_signals)
+        logger.info("AI provider returned analysis payload: %s", analysis)
 
         run = AnalysisRun(
             executed_at=datetime.now(),
