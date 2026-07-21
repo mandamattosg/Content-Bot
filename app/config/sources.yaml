@@ -1,0 +1,33 @@
+rss_feeds:
+  - https://news.google.com/rss/search?q=mercado+editorial+brasileiro&hl=pt-BR&gl=BR&ceid=BR:pt-BR
+  - https://news.google.com/rss/search?q=livros+Brasil+publishing&hl=pt-BR&gl=BR&ceid=BR:pt-BR
+  - https://news.google.com/rss/search?q=booktok+Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-BR
+  - https://news.google.com/rss/search?q=books+publishing+literary+market&hl=en-US&gl=US&ceid=US:en
+  - https://news.google.com/rss/search?q=booktok&hl=en-US&gl=US&ceid=US:en
+  - https://news.google.com/rss/search?q=kindle+books&hl=en-US&gl=US&ceid=US:en
+  - https://news.google.com/rss/search?q=romantasy+publishing&hl=en-US&gl=US&ceid=US:en
+
+reddit_subreddits:
+  - books
+  - booktok
+  - kindle
+  - fantasy
+  - romancebooks
+  - suggestmeabook
+  - Brasil
+  - livros
+  - selfpublish
+
+trend_keywords:
+  - Kindle
+  - BookTok
+  - Harry Potter
+  - Fourth Wing
+  - Romantasy
+  - Audiobook
+  - Skoob
+  - Clube do Livro
+  - Editora Record
+  - Editora Intrínseca
+  - Fantasia Brasileira
+  - Romances Brasileiros
