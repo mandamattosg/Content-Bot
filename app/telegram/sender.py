@@ -84,12 +84,7 @@ class TelegramSender:
                     lines.append("Origem:")
                     for entry in source_trace:
                         label = str(entry.get("source_name") or entry.get("source") or "Fonte")
-                        title = str(entry.get("title") or "")
-                        url = entry.get("url") or ""
-                        if url:
-                            lines.append(f"  • {html.escape(label)}: {html.escape(title)} ({url})")
-                        else:
-                            lines.append(f"  • {html.escape(label)}: {html.escape(title)}")
+                        lines.append(f"  • {html.escape(label)}")
 
                 ideas = topic.get("video_ideas", [])[:3]
                 if ideas:
