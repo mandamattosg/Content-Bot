@@ -39,7 +39,12 @@ def test_build_summary_message_escapes_html_special_chars() -> None:
                         "source_name": "Portal <A>",
                         "title": "Título <B>",
                         "url": "https://example.com/?a=1&b=2",
-                    }
+                    },
+                    {
+                        "source_name": "Outro Portal <C>",
+                        "title": "Outro Título <D>",
+                        "url": "https://example.com/2",
+                    },
                 ],
             }
         ],
@@ -53,3 +58,4 @@ def test_build_summary_message_escapes_html_special_chars() -> None:
     assert "Ideias:" in message
     assert "Ideia &lt;x&gt;" in message
     assert "Portal &lt;A&gt;" in message
+    assert "Outro Portal &lt;C&gt;" not in message

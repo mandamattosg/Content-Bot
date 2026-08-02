@@ -79,7 +79,7 @@ class TelegramSender:
                 if reason:
                     lines.append(f"Motivo: {html.escape(reason)}")
 
-                source_trace = topic.get("source_trace", [])[:2]
+                source_trace = topic.get("source_trace", [])[:1]
                 if source_trace:
                     lines.append("Origem:")
                     for entry in source_trace:
