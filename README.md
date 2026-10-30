@@ -96,12 +96,22 @@ alembic upgrade head
 
 ## Como executar a analise
 
-1. Configure `GEMINI_API_KEY` no `.env`.
+1. Configure `GEMINI_API_KEY` e `PIPELINE_API_KEY` no `.env`.
 2. Execute o fluxo de ingestao para salvar sinais recentes.
 3. Chame o endpoint:
 
 ```powershell
-curl -X POST http://127.0.0.1:8000/pipeline/analyze
+curl.exe -X POST http://127.0.0.1:8000/pipeline/analyze -H "X-API-Key: sua_chave"
+```
+
+## Autenticacao
+
+Todas as rotas `/pipeline/*` exigem o header `X-API-Key` com o valor de `PIPELINE_API_KEY`. Sem a chave configurada, elas respondem `503`; com a chave errada ou ausente, `401`.
+
+Para gerar uma chave:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ## Proximos passos

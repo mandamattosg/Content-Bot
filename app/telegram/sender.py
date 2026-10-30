@@ -29,17 +29,27 @@ class TelegramSender:
             response = requests.post(url, json=payload, timeout=15)
             response.raise_for_status()
             return response.json()
-        except requests.HTTPError as exc:
+        except requests.HTTPError:
             try:
                 detail = response.json() if response is not None else {}
             except ValueError:
                 detail = {"raw": response.text if response is not None else ""}
+            status_code = response.status_code if response is not None else None
             return {
                 "ok": False,
                 "error": "telegram_send_failed",
-                "status_code": response.status_code if response is not None else None,
-                "message": str(exc),
+                "status_code": status_code,
+                "message": f"Telegram API returned HTTP {status_code}",
                 "details": detail,
+            }
+        # str(exc) from requests includes the URL, which contains the bot token.
+        except requests.RequestException as exc:
+            return {
+                "ok": False,
+                "error": "telegram_send_failed",
+                "status_code": None,
+                "message": f"Telegram request failed: {type(exc).__name__}",
+                "details": {},
             }
 
     def send_messages(self, texts: list[str]) -> list[dict[str, Any]]:

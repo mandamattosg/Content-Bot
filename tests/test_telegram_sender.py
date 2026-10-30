@@ -1,4 +1,43 @@
+import requests
+
 from app.telegram.sender import TelegramSender
+
+
+def test_send_message_http_error_does_not_expose_token(monkeypatch) -> None:
+    sender = TelegramSender(token="SECRET-TOKEN", chat_id="chat")
+
+    class DummyResponse:
+        status_code = 404
+        text = "not found"
+
+        def raise_for_status(self) -> None:
+            raise requests.HTTPError("404 for url: https://api.telegram.org/botSECRET-TOKEN/sendMessage")
+
+        def json(self) -> dict[str, object]:
+            return {"ok": False, "description": "Not Found"}
+
+    monkeypatch.setattr("app.telegram.sender.requests.post", lambda *args, **kwargs: DummyResponse())
+
+    result = sender.send_message("Olá")
+
+    assert result["ok"] is False
+    assert result["status_code"] == 404
+    assert "SECRET-TOKEN" not in str(result)
+
+
+def test_send_message_connection_error_does_not_expose_token(monkeypatch) -> None:
+    sender = TelegramSender(token="SECRET-TOKEN", chat_id="chat")
+
+    def fake_post(*args: object, **kwargs: object) -> None:
+        raise requests.ConnectionError("Max retries exceeded with url: /botSECRET-TOKEN/sendMessage")
+
+    monkeypatch.setattr("app.telegram.sender.requests.post", fake_post)
+
+    result = sender.send_message("Olá")
+
+    assert result["ok"] is False
+    assert result["message"] == "Telegram request failed: ConnectionError"
+    assert "SECRET-TOKEN" not in str(result)
 
 
 def test_send_message_uses_html_parse_mode(monkeypatch) -> None:

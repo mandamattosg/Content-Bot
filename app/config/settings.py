@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     gemini_model_name: str = Field(default="gemini-2.0-flash", alias="GEMINI_MODEL_NAME")
     telegram_token: str = Field(default="", alias="TELEGRAM_TOKEN")
     telegram_chat_id: str = Field(default="", alias="TELEGRAM_CHAT_ID")
+    pipeline_api_key: str = Field(default="", alias="PIPELINE_API_KEY")
 
     enable_scheduler: bool = False
     scheduler_hour: int = 8

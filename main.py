@@ -1,7 +1,9 @@
 import logging
+import secrets
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Security
+from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
 from fastapi import HTTPException
@@ -44,6 +46,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_pipeline_api_key(api_key: str | None = Security(api_key_header)) -> None:
+    if not settings.pipeline_api_key:
+        raise HTTPException(status_code=503, detail="PIPELINE_API_KEY is not configured")
+    if not api_key or not secrets.compare_digest(api_key.encode(), settings.pipeline_api_key.encode()):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
+pipeline_router = APIRouter(prefix="/pipeline", dependencies=[Depends(require_pipeline_api_key)])
+
 
 @app.get("/")
 def root() -> dict[str, str]:
@@ -59,7 +73,7 @@ def health() -> dict[str, str]:
     }
 
 
-@app.post("/pipeline/collect-and-ingest")
+@pipeline_router.post("/collect-and-ingest")
 def collect_and_ingest() -> dict[str, int]:
     logger.info("Starting endpoint: /pipeline/collect-and-ingest")
     collectors = [NewsCollector(), RedditCollector(), TrendsCollector()]
@@ -83,7 +97,7 @@ def collect_and_ingest() -> dict[str, int]:
     }
 
 
-@app.post("/pipeline/analyze")
+@pipeline_router.post("/analyze")
 def analyze_recent_signals() -> dict[str, object]:
     logger.info("Starting endpoint: /pipeline/analyze")
     db: Session = SessionLocal()
@@ -99,7 +113,7 @@ def analyze_recent_signals() -> dict[str, object]:
     return result
 
 
-@app.post("/pipeline/gemini-test")
+@pipeline_router.post("/gemini-test")
 def gemini_test() -> dict[str, object]:
     logger.info("Starting endpoint: /pipeline/gemini-test")
     provider = GeminiProvider(api_key=settings.gemini_api_key)
@@ -123,7 +137,7 @@ def gemini_test() -> dict[str, object]:
     return {"status": "ok", "response": payload}
 
 
-@app.post("/pipeline/send-telegram")
+@pipeline_router.post("/send-telegram")
 def send_telegram_message() -> dict[str, object]:
     logger.info("Starting endpoint: /pipeline/send-telegram")
     db: Session = SessionLocal()
@@ -142,7 +156,7 @@ def send_telegram_message() -> dict[str, object]:
     return {"status": "sent", "telegram": result}
 
 
-@app.post("/pipeline/run")
+@pipeline_router.post("/run")
 def run_pipeline() -> dict[str, object]:
     logger.info("Starting endpoint: /pipeline/run")
     db: Session = SessionLocal()
@@ -168,3 +182,6 @@ def run_pipeline() -> dict[str, object]:
 
     logger.info("Completed endpoint: /pipeline/run")
     return {"status": "ok", "pipeline": result}
+
+
+app.include_router(pipeline_router)
